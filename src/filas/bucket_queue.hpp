@@ -1,6 +1,6 @@
 #include<bits/stdc++.h>
 using namespace std;
-#include "define.hpp"
+#include "pool.hpp"
 
 struct _klv_bucket_queue_DK{
     double delta;
