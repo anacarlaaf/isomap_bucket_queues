@@ -1,5 +1,4 @@
 """Isomap for manifold learning"""
-from time import perf_counter
 
 # Authors: The scikit-learn developers
 # SPDX-License-Identifier: BSD-3-Clause
@@ -10,7 +9,7 @@ from numbers import Integral, Real
 import numpy as np
 from scipy.sparse import issparse
 from scipy.sparse.csgraph import connected_components
-from my_isomap.my_shortest_path import shortest_path
+from isomap.shortest_path import shortest_path
 
 from sklearn.base import (
     BaseEstimator,
@@ -23,7 +22,6 @@ from sklearn.metrics.pairwise import _VALID_METRICS
 from sklearn.neighbors import NearestNeighbors, kneighbors_graph, radius_neighbors_graph
 from sklearn.preprocessing import KernelCenterer
 from sklearn.utils._param_validation import Interval, StrOptions
-#from sklearn.utils.fixes import _ensure_sparse_index_int32
 from sklearn.utils.graph import _fix_connected_components
 from sklearn.utils.validation import check_is_fitted
 
@@ -300,31 +298,18 @@ class Isomap(ClassNamePrefixFeaturesOutMixin, TransformerMixin, BaseEstimator):
                 **self.nbrs_.effective_metric_params_,
             )
 
-        # passa o grafo float diretamente — bucket_queue usa delta=min_edge internamente
-        self.dist_matrix_ = shortest_path(
-            nbg,
-            method=self.path_method,
-            directed=False
-        )
+        self.dist_matrix_ = shortest_path(nbg, method=self.path_method, directed=False)
 
         if self.nbrs_._fit_X.dtype == np.float32:
             self.dist_matrix_ = self.dist_matrix_.astype(
-                np.float32, copy=False
+                self.nbrs_._fit_X.dtype, copy=False
             )
-        
-        G = self.dist_matrix_ ** 2
+
+        G = self.dist_matrix_**2
         G *= -0.5
 
         self.embedding_ = self.kernel_pca_.fit_transform(G)
         self._n_features_out = self.embedding_.shape[1]
-
-        # print("\n--- PROFILING ---")
-        # print(f"NN fit          : {t1-t0:.4f}s")
-        # print(f"kNN graph       : {t2-t1:.4f}s")
-        # print(f"shortest path   : {t3-t2:.4f}s")
-        # print(f"kernel matrix   : {t4-t3:.4f}s")
-        # print(f"KernelPCA       : {t5-t4:.4f}s")
-        # print(f"TOTAL           : {t5-t0:.4f}s")
 
     def reconstruction_error(self):
         """Compute the reconstruction error for the embedding.
@@ -346,7 +331,6 @@ class Isomap(ClassNamePrefixFeaturesOutMixin, TransformerMixin, BaseEstimator):
 
         ``K(D) = -0.5 * (I - 1/n_samples) * D^2 * (I - 1/n_samples)``
         """
-        
         G = -0.5 * self.dist_matrix_**2
         G_center = KernelCenterer().fit_transform(G)
         evals = self.kernel_pca_.eigenvalues_
